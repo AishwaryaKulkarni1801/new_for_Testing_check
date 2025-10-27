@@ -1,0 +1,154 @@
+name: Deploy to GitHub Pages
+
+on:
+  # Trigger on every push to main branch
+  push:
+    branches: [ main ]
+  # Allow manual dispatch
+  workflow_dispatch:
+
+# Set permissions for GitHub Pages deployment
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Cancel previous runs if a new one is triggered
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Checkout repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      # 2. Setup Node.js (latest stable version)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          
+      # 3. Install dependencies using npm ci
+      - name: Install dependencies
+        run: npm ci
+        
+      # 4. Detect framework and project details
+      - name: Detect framework and build project
+        run: |
+          # Initialize variables
+          FRAMEWORK=""
+          PROJECT_NAME=""
+          REPO_NAME="${{ github.repository }}"
+          REPO_NAME="${REPO_NAME#*/}"  # Extract repo name from owner/repo format
+          
+          # Detect framework
+          if [ -f "angular.json" ]; then
+            FRAMEWORK="angular"
+            # Extract Angular project name from angular.json
+            PROJECT_NAME=$(node -p "Object.keys(require('./angular.json').projects)[0]")
+            echo "Detected Angular project: $PROJECT_NAME"
+            echo "Building for GitHub Pages with base-href: /$REPO_NAME/"
+            
+            # Build Angular project with base-href for GitHub Pages
+            npm run build -- --base-href "/$REPO_NAME/"
+            
+            # Set output path for Angular
+            echo "BUILD_PATH=dist/$PROJECT_NAME" >> $GITHUB_ENV
+            
+          elif [ -f "package.json" ] && grep -q "react" package.json; then
+            FRAMEWORK="react"
+            echo "Detected React project"
+            
+            # Set PUBLIC_URL for React GitHub Pages
+            export PUBLIC_URL="/$REPO_NAME"
+            npm run build
+            
+            # Set output path for React (try both common paths)
+            if [ -d "build" ]; then
+              echo "BUILD_PATH=build" >> $GITHUB_ENV
+            elif [ -d "dist" ]; then
+              echo "BUILD_PATH=dist" >> $GITHUB_ENV
+            fi
+            
+          elif [ -f "package.json" ] && grep -q "vue" package.json; then
+            FRAMEWORK="vue"
+            echo "Detected Vue project"
+            
+            # Build Vue project
+            npm run build
+            
+            # Set output path for Vue (try both common paths)
+            if [ -d "dist" ]; then
+              echo "BUILD_PATH=dist" >> $GITHUB_ENV
+            elif [ -d "build" ]; then
+              echo "BUILD_PATH=build" >> $GITHUB_ENV
+            fi
+            
+          else
+            echo "Framework not detected or unsupported"
+            echo "Attempting generic build..."
+            npm run build
+            
+            # Try to detect build output directory
+            if [ -d "dist" ]; then
+              echo "BUILD_PATH=dist" >> $GITHUB_ENV
+            elif [ -d "build" ]; then
+              echo "BUILD_PATH=build" >> $GITHUB_ENV
+            else
+              echo "BUILD_PATH=." >> $GITHUB_ENV
+            fi
+          fi
+          
+          echo "FRAMEWORK=$FRAMEWORK" >> $GITHUB_ENV
+          echo "PROJECT_NAME=$PROJECT_NAME" >> $GITHUB_ENV
+          echo "REPO_NAME=$REPO_NAME" >> $GITHUB_ENV
+          
+      # 5. Copy index.html to 404.html (for SPA routing support)
+      - name: Fix SPA routing for GitHub Pages
+        run: |
+          if [ -f "${{ env.BUILD_PATH }}/index.html" ]; then
+            echo "Copying index.html to 404.html for SPA routing support"
+            cp "${{ env.BUILD_PATH }}/index.html" "${{ env.BUILD_PATH }}/404.html"
+          fi
+          
+      # 6. Setup Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      # 7. Upload artifact
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.BUILD_PATH }}
+
+  # Deploy job
+  deploy:
+    # Setup environment for GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      # 8. Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        
+      # 9. Output deployed page URL
+      - name: Output deployment URL
+        run: |
+          echo "🚀 Deployment completed successfully!"
+          echo "📁 Framework: ${{ env.FRAMEWORK || 'Generic' }}"
+          echo "📦 Project: ${{ env.PROJECT_NAME || 'N/A' }}"
+          echo "🌐 Deployed URL: ${{ steps.deployment.outputs.page_url }}"
+          echo ""
+          echo "✅ Your application is now live at: ${{ steps.deployment.outputs.page_url }}"
