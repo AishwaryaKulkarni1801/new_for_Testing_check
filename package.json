@@ -14,7 +14,7 @@
     "deploy:full": "bash deploy.sh",
     "deploy:win": "deploy.bat",
     "deploy:advanced": "bash advanced-deploy.sh",
-    "coverage": "npm run test:coverage && (xdg-open coverage/lcov-report/index.html || open coverage/lcov-report/index.html || start coverage/lcov-report/index.html || echo 'Open: coverage/lcov-report/index.html')"
+    "deploy:coverage": "npm run test -- --coverage --watchAll=false && npm run build -- --base-href '/new_for_Testing_check/' && git add . && git commit -m 'Auto deploy with coverage' && git push origin main"
   },
   "private": true,
   "dependencies": {
