@@ -14,7 +14,9 @@
     "deploy:full": "bash deploy.sh",
     "deploy:win": "deploy.bat",
     "deploy:advanced": "bash advanced-deploy.sh",
-    "deploy:coverage": "npm run test -- --coverage --watchAll=false && npm run build -- --base-href '/new_for_Testing_check/' && git add . && git commit -m 'Auto deploy with coverage' && git push origin main"
+    "deploy:coverage": "npm run test -- --coverage --watchAll=false && npm run build -- --base-href '/new_for_Testing_check/' && git add . && git commit -m 'Auto deploy with coverage' && git push origin main",
+    "deploy:angular": "bash angular-deploy.sh",
+    "deploy:windows": "angular-deploy.bat"
   },
   "private": true,
   "dependencies": {
