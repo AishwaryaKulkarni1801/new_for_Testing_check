@@ -74,7 +74,9 @@ call npm run build -- --base-href "/new_for_Testing_check/"
 if %errorlevel% equ 0 (
     echo ✅ Angular build completed successfully!
     set BUILD_COMPLETED=true
-    if exist "dist" (
+    if exist "dist\cicd-demo4" (
+        echo ℹ️  Build output available in: dist\cicd-demo4\ directory
+    ) else if exist "dist" (
         echo ℹ️  Build output available in: dist\ directory
     )
 ) else (

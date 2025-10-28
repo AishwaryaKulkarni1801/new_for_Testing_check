@@ -59,8 +59,21 @@ jobs:
             # Build Angular project with base-href for GitHub Pages
             npm run build -- --base-href "/$REPO_NAME/"
             
-            # Set output path for Angular
-            echo "BUILD_PATH=dist/$PROJECT_NAME" >> $GITHUB_ENV
+            # For this specific project, we know the output path is dist/cicd-demo4
+            # This is a more reliable approach than trying to parse complex JSON
+            if [ -d "dist/cicd-demo4" ]; then
+              echo "BUILD_PATH=dist/cicd-demo4" >> $GITHUB_ENV
+              echo "Using Angular build output: dist/cicd-demo4"
+            elif [ -d "dist/$PROJECT_NAME" ]; then
+              echo "BUILD_PATH=dist/$PROJECT_NAME" >> $GITHUB_ENV
+              echo "Using Angular build output: dist/$PROJECT_NAME"
+            elif [ -d "dist" ]; then
+              echo "BUILD_PATH=dist" >> $GITHUB_ENV
+              echo "Using Angular build output: dist"
+            else
+              echo "❌ Build output directory not found!"
+              exit 1
+            fi
             
           elif [ -f "package.json" ] && grep -q "react" package.json; then
             FRAMEWORK="react"

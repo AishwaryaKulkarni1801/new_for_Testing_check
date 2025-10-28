@@ -166,8 +166,10 @@ build_angular_application() {
     if eval "$build_command"; then
         print_success "Angular build completed successfully!"
         
-        # Check if dist directory was created
-        if [ -d "dist" ]; then
+        # Check for the actual output directory (Angular uses lowercase with hyphens)
+        if [ -d "dist/cicd-demo4" ]; then
+            print_info "Build output available in: dist/cicd-demo4/ directory"
+        elif [ -d "dist" ]; then
             print_info "Build output available in: dist/ directory"
         fi
         
